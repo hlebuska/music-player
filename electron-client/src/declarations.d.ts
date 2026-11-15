@@ -5,3 +5,12 @@ declare module '*.css';
 interface Window {
   mic: import('./shared/mic').MicApi;
 }
+
+interface ImportMetaEnv {
+  readonly VITE_VOICE_SERVER_URL: string;
+  readonly VITE_CLIENT_TOKEN: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

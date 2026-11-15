@@ -3,12 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Spectrum } from '@/components/Spectrum';
 import { VolumeKnob } from '@/components/VolumeKnob';
 import { cn } from '@/lib/utils';
+import type { ServerStatus } from '@/hooks/useVoiceServer';
 import type { WakeWordStatus } from '@/hooks/useWakeWord';
 
 type Props = {
   status: WakeWordStatus;
   stream: MediaStream | null; // the live mic input, once listening
   recording: boolean; // recording a command after the wake word
+  serverStatus: ServerStatus;
   onOpenSettings: () => void;
 };
 
@@ -17,8 +19,16 @@ const STATUS_TEXT: Partial<Record<WakeWordStatus, string>> = {
   failed: "Couldn't start listening. See the console.",
 };
 
-export function PlayerPage({ status, stream, recording, onOpenSettings }: Props) {
-  const message = STATUS_TEXT[status];
+export function PlayerPage({
+  status,
+  stream,
+  recording,
+  serverStatus,
+  onOpenSettings,
+}: Props) {
+  const message =
+    STATUS_TEXT[status] ??
+    (serverStatus === 'disconnected' ? "Can't reach the voice server." : undefined);
 
   return (
     <main className="relative flex h-screen items-center justify-center">

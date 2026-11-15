@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRecorder } from '@/hooks/useRecorder';
+import { useVoiceServer } from '@/hooks/useVoiceServer';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { PlayerPage } from '@/pages/PlayerPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -11,8 +12,15 @@ const RECORD_MS = 6000;
 export function App() {
   const [page, setPage] = useState<Page>('player');
 
+  const server = useVoiceServer((message) => {
+    console.log('server:', message);
+  });
+
   const recorder = useRecorder((clip) => {
-    console.log(`recorded ${Math.round(clip.size / 1024)} KB of ${clip.type}`);
+    const sent = server.send(clip);
+    console.log(
+      `${sent ? 'sent' : 'not connected, dropped'} ${Math.round(clip.size / 1024)} KB clip`,
+    );
   });
 
   // Lives here, not in PlayerPage, so it keeps listening while settings is open
@@ -29,6 +37,7 @@ export function App() {
       status={status}
       stream={stream}
       recording={recorder.recording}
+      serverStatus={server.status}
       onOpenSettings={() => setPage('settings')}
     />
   );
