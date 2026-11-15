@@ -55,7 +55,7 @@ async def ws(websocket: WebSocket, hello: dict = Depends(authenticated_hello)):
             print(f"intent: {intent}")
             if intent is None:
                 await websocket.send_json(
-                    {"type": "error", "code": "not_understood", "message": f"didn't understand: {text!r}"}
+                    {"type": "error", "code": "not_understood", "message": f"didn't understand intent: {text!r}"}
                 )
                 continue
 
