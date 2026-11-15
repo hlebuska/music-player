@@ -1,0 +1,27 @@
+[project]
+name = "voice-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.5",
+    "faster-whisper>=1.2.1",
+    "python-dotenv>=1.2.4",
+    "uvicorn>=0.54.0",
+    "websockets>=17.4",
+    "ytmusicapi>=1.12.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.uv]
+# faster-whisper 1.2.1 calls av.open(metadata_errors=...), which PyAV 19 removed
+constraint-dependencies = ["av<19"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]   # so tests can import voice_server

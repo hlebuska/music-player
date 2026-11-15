@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <input type="password" id="token" placeholder="client token" autocomplete="off"/>
+        <button onclick="sendHello()">Hello</button>
+        <button onclick="closeConnection()">Close</button>
+        <style>
+            #drop { margin: 12px 0; padding: 24px; border: 2px dashed #999; border-radius: 8px; text-align: center; cursor: pointer; }
+            #drop.over { border-color: #06c; background: #eef5ff; }
+            #messages { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+            #messages li { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: #f7f7f7; font-family: monospace; font-size: 13px; word-break: break-all; }
+        </style>
+        <div id="drop">Drop an audio file here, or click to choose one</div>
+        <input type="file" id="fileInput" accept="audio/*" hidden/>
+        <button onclick="sendFile()">Send</button>
+        <button id="recordBtn" onclick="toggleRecord()">Record</button>
+        <ul id='messages'>
+        </ul>
+        <script>
+            var ws = null
+            function log(text) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                message.appendChild(document.createTextNode(text))
+                messages.appendChild(message)
+            }
+            var tokenInput = document.getElementById("token")
+            tokenInput.value = localStorage.getItem("token") || "__DEFAULT_TOKEN__"
+            // Connect on click, so the server's 5 s hello timeout starts now
+            function sendHello() {
+                localStorage.setItem("token", tokenInput.value)
+                if (ws) ws.close()
+                ws = new WebSocket("ws://" + location.host + "/ws")
+                ws.onmessage = function(event) { log(event.data) }
+                ws.onclose = function(event) { log("closed: code " + event.code + (event.reason ? " (" + event.reason + ")" : "")) }
+                ws.onopen = function() {
+                    log("connected, sending hello")
+                    ws.send(JSON.stringify({
+                        type: "hello",
+                        id: crypto.randomUUID(),
+                        client_id: "test-page",
+                        kind: "browser",
+                        token: tokenInput.value
+                    }))
+                }
+            }
+            function closeConnection() {
+                if (!ws || ws.readyState !== WebSocket.OPEN) { log("not connected"); return }
+                ws.close(1000, "closed by user")   // 1000 = normal closure; onclose logs it
+                ws = null
+            }
+            // File drop: remember the chosen file, Send ships it as one binary message
+            var selectedFile = null
+            var drop = document.getElementById("drop")
+            var fileInput = document.getElementById("fileInput")
+            function selectFile(file) {
+                if (!file) return
+                selectedFile = file
+                drop.textContent = file.name + " (" + file.size + " bytes)"
+            }
+            drop.onclick = function() { fileInput.click() }
+            fileInput.onchange = function() { selectFile(fileInput.files[0]) }
+            drop.ondragover = function(event) { event.preventDefault(); drop.classList.add("over") }
+            drop.ondragleave = function() { drop.classList.remove("over") }
+            drop.ondrop = function(event) {
+                event.preventDefault()          // stop the browser from opening the file
+                drop.classList.remove("over")
+                selectFile(event.dataTransfer.files[0])
+            }
+            function sendFile() {
+                if (!ws || ws.readyState !== WebSocket.OPEN) { log("not connected, press Hello first"); return }
+                if (!selectedFile) { log("no file selected"); return }
+                ws.send(selectedFile)           // a File is a Blob, so it goes as a binary frame
+                log("sent " + selectedFile.name + " (" + selectedFile.size + " bytes)")
+            }
+            // Record: first click starts the mic, second click stops and sends the clip
+            var recorder = null
+            var recordBtn = document.getElementById("recordBtn")
+            async function toggleRecord() {
+                if (recorder) { recorder.stop(); return }
+                if (!ws || ws.readyState !== WebSocket.OPEN) { log("not connected, press Hello first"); return }
+                var stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+                var chunks = []
+                recorder = new MediaRecorder(stream)
+                recorder.ondataavailable = function(e) { chunks.push(e.data) }
+                recorder.onstop = function() {
+                    stream.getTracks().forEach(function(t) { t.stop() })   // turn the mic off
+                    var blob = new Blob(chunks, { type: recorder.mimeType })
+                    ws.send(blob)
+                    log("sent recording (" + blob.size + " bytes, " + recorder.mimeType + ")")
+                    recorder = null
+                    recordBtn.textContent = "Record"
+                }
+                recorder.start()
+                recordBtn.textContent = "Stop & send"
+            }
+        </script>
+    </body>
+</html>
