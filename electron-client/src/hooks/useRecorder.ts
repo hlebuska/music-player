@@ -1,53 +1,36 @@
-import { useRef, useState } from 'react';
-import { getSavedDevice, SYSTEM_DEFAULT } from '@/lib/audioDevices';
+import { useEffect, useRef, useState } from 'react';
 
-// Records one clip from the microphone: start() turns the mic on, stop() turns
-// it off and hands the finished clip to onRecorded. While recording, `stream`
-// is the live mic input (used to draw the spectrum).
+// Records from the wake word's already-open stream, so the mic stays on for it
 export function useRecorder(onRecorded: (clip: Blob) => void) {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const onRecordedRef = useRef(onRecorded);
+  onRecordedRef.current = onRecorded;
 
-  async function start() {
-    setError(null);
-    const deviceId = getSavedDevice('audioinput');
-    let mic: MediaStream;
-    try {
-      mic = await navigator.mediaDevices.getUserMedia({
-        // Echo cancellation keeps the music out of the mic; the server only needs mono
-        audio: {
-          // A plain deviceId (not { exact }) falls back to another mic if the
-          // chosen one was unplugged, instead of failing
-          ...(deviceId !== SYSTEM_DEFAULT && { deviceId }),
-          echoCancellation: true,
-          noiseSuppression: true,
-          channelCount: 1,
-        },
-      });
-    } catch {
-      setError('No microphone access. Check Settings.');
-      return;
-    }
+  function start(stream: MediaStream, maxMs: number) {
+    if (recorderRef.current) return;
 
-    // WebM/Opus by default, which the server's Whisper decodes directly
-    const recorder = new MediaRecorder(mic);
+    const recorder = new MediaRecorder(stream);
     const chunks: Blob[] = [];
     recorder.ondataavailable = (event) => chunks.push(event.data);
     recorder.onstop = () => {
-      mic.getTracks().forEach((track) => track.stop()); // mic indicator off
-      setStream(null);
-      onRecorded(new Blob(chunks, { type: recorder.mimeType }));
+      setRecording(false);
+      onRecordedRef.current(new Blob(chunks, { type: recorder.mimeType }));
     };
     recorder.start();
     recorderRef.current = recorder;
-    setStream(mic);
+    setRecording(true);
+    timerRef.current = setTimeout(stop, maxMs);
   }
 
   function stop() {
+    clearTimeout(timerRef.current);
     recorderRef.current?.stop();
     recorderRef.current = null;
   }
 
-  return { recording: stream !== null, stream, error, start, stop };
+  useEffect(() => stop, []);
+
+  return { recording, start, stop };
 }

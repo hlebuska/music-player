@@ -8,7 +8,7 @@ import type { WakeWordStatus } from '@/hooks/useWakeWord';
 type Props = {
   status: WakeWordStatus;
   stream: MediaStream | null; // the live mic input, once listening
-  heard: boolean; // the wake word was just heard
+  recording: boolean; // recording a command after the wake word
   onOpenSettings: () => void;
 };
 
@@ -17,7 +17,7 @@ const STATUS_TEXT: Partial<Record<WakeWordStatus, string>> = {
   failed: "Couldn't start listening. See the console.",
 };
 
-export function PlayerPage({ status, stream, heard, onOpenSettings }: Props) {
+export function PlayerPage({ status, stream, recording, onOpenSettings }: Props) {
   const message = STATUS_TEXT[status];
 
   return (
@@ -38,10 +38,10 @@ export function PlayerPage({ status, stream, heard, onOpenSettings }: Props) {
       {/* The circle stays centred; the spectrum and messages hang below it */}
       <div className="relative">
         <div
-          data-heard={heard}
+          data-recording={recording}
           className={cn(
             'size-16 rounded-full bg-primary outline-3 outline-offset-4 outline-transparent transition-[outline-color] duration-300',
-            heard && 'outline-blue-500',
+            recording && 'outline-blue-500',
           )}
         />
         <div className="absolute top-full left-1/2 mt-4 -translate-x-1/2">

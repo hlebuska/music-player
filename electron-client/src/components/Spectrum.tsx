@@ -53,7 +53,7 @@ export function Spectrum({ stream, className }: Props) {
 
     return () => {
       cancelAnimationFrame(frame);
-      source.disconnect(); // useRecorder owns the mic tracks and stops them
+      source.disconnect(); // useWakeWord owns the mic tracks and stops them
       void ctx.close();
     };
   }, [stream]);

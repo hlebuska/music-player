@@ -1,23 +1,24 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { useRecorder } from '@/hooks/useRecorder';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { PlayerPage } from '@/pages/PlayerPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 
 type Page = 'player' | 'settings';
 
-const HEARD_MS = 3000; // how long the blue outline stays after the wake word
+const RECORD_MS = 6000;
 
 export function App() {
   const [page, setPage] = useState<Page>('player');
-  const [heard, setHeard] = useState(false);
-  const heardTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const recorder = useRecorder((clip) => {
+    console.log(`recorded ${Math.round(clip.size / 1024)} KB of ${clip.type}`);
+  });
 
   // Lives here, not in PlayerPage, so it keeps listening while settings is open
   const { status, stream } = useWakeWord(() => {
     console.log('wake word heard');
-    setHeard(true);
-    clearTimeout(heardTimer.current); // heard again: restart the 3 s
-    heardTimer.current = setTimeout(() => setHeard(false), HEARD_MS);
+    if (stream) recorder.start(stream, RECORD_MS);
   });
 
   if (page === 'settings') {
@@ -27,7 +28,7 @@ export function App() {
     <PlayerPage
       status={status}
       stream={stream}
-      heard={heard}
+      recording={recorder.recording}
       onOpenSettings={() => setPage('settings')}
     />
   );
