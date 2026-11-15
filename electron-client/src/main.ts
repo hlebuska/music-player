@@ -28,9 +28,28 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 };
 
+// Visible for testing; will be hidden and driven by the server's commands
+const createPlayerWindow = () => {
+  const playerWindow = new BrowserWindow({
+    width: 1000,
+    height: 700,
+    // persist: keeps the Google sign-in across restarts
+    webPreferences: { partition: 'persist:ytmusic' },
+  });
+
+  // Google blocks sign-in when the user agent mentions Electron
+  const chromeUserAgent = app.userAgentFallback
+    .replace(/ Electron\/\S+/, '')
+    .replace(` ${app.getName()}/${app.getVersion()}`, '');
+  playerWindow.webContents.setUserAgent(chromeUserAgent);
+
+  playerWindow.loadURL('https://music.youtube.com');
+};
+
 app.whenReady().then(() => {
   registerMicPermissionHandlers();
   createWindow();
+  createPlayerWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
