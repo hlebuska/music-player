@@ -62,8 +62,8 @@ async def ws(websocket: WebSocket, hello: dict = Depends(authenticated_hello)):
             # Tell the client what we understood, then what to do about it
             await websocket.send_json({"type": "heard", "transcript": text, "intent": asdict(intent)})
 
-            for command in await websocket.app.state.controller.handle(intent):
-                print(f"command: {command}")
-                await websocket.send_json(command)
+            command = await websocket.app.state.controller.handle(intent)
+            print(f"command: {command}")
+            await websocket.send_json(command)
     except WebSocketDisconnect:
         print(f"client left: {hello.get('client_id')}")

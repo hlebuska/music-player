@@ -12,7 +12,7 @@ def error(code: str, message: str) -> dict:
 
 
 class Controller:
-    """Takes an intent, updates the player state, returns the commands to send to the client.
+    """Takes an intent, updates the player state, returns the command to send to the client.
 
     One instance for the whole server, holding the state (current track, playing
     or paused, volume) in memory, so every client shares it. Separate state per
@@ -25,7 +25,7 @@ class Controller:
         self.playing = False
         self.volume = 50
 
-    async def handle(self, intent: Intent) -> list[dict]:
+    async def handle(self, intent: Intent) -> dict:
         match intent.name:
             case "play" | "play_radio":
                 return await self.play(intent.slots.get("query") or intent.slots.get("seed"))
@@ -40,32 +40,32 @@ class Controller:
             case _:
                 # next, prev: need a queue (open question: YouTube's autoplay or our own)
                 # like: needs a logged-in ytmusicapi
-                return [error("not_supported", f"{intent.name!r} isn't supported yet")]
+                return error("not_supported", f"{intent.name!r} isn't supported yet")
 
-    async def play(self, query: str | None) -> list[dict]:
+    async def play(self, query: str | None) -> dict:
         if not query:
-            return [error("not_understood", "what should I play?")]
+            return error("not_understood", "what should I play?")
         # Blocking network call: run it in a thread so other sockets keep working
         track = await asyncio.to_thread(self.search.find_song, query)
         if track is None:
-            return [error("not_found", f"nothing found for {query!r}")]
+            return error("not_found", f"nothing found for {query!r}")
         self.current = track
         self.playing = True
-        return [{"type": "play", "videoId": track.video_id, "track": asdict(track)}]
+        return {"type": "play", "videoId": track.video_id, "track": asdict(track)}
 
-    def pause(self) -> list[dict]:
+    def pause(self) -> dict:
         if self.current is None:
-            return [error("nothing_playing", "nothing to pause")]
+            return error("nothing_playing", "nothing to pause")
         self.playing = False
-        return [{"type": "pause"}]
+        return {"type": "pause"}
 
-    def resume(self) -> list[dict]:
+    def resume(self) -> dict:
         if self.current is None:
-            return [error("nothing_playing", "nothing to resume")]
+            return error("nothing_playing", "nothing to resume")
         self.playing = True
-        return [{"type": "resume"}]
+        return {"type": "resume"}
 
-    def set_volume(self, slots: dict) -> list[dict]:
+    def set_volume(self, slots: dict) -> dict:
         if "level" in slots:
             level = slots["level"]
         elif slots.get("direction") == "up":
@@ -73,14 +73,12 @@ class Controller:
         else:
             level = self.volume - VOLUME_STEP
         self.volume = max(0, min(100, level))
-        return [{"type": "volume", "level": self.volume}]
+        return {"type": "volume", "level": self.volume}
 
-    def status(self) -> list[dict]:
-        return [
-            {
-                "type": "status",
-                "playing": self.playing,
-                "volume": self.volume,
-                "track": asdict(self.current) if self.current else None,
-            }
-        ]
+    def status(self) -> dict:
+        return {
+            "type": "status",
+            "playing": self.playing,
+            "volume": self.volume,
+            "track": asdict(self.current) if self.current else None,
+        }
