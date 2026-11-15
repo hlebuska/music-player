@@ -26,8 +26,9 @@ export type AudioDevice = { id: string; label: string };
 // Lists the devices of one kind and keeps the list current as devices are
 // plugged in or out. Names are only visible after the mic permission is granted;
 // before that the browser hides them, so we number the devices instead.
-export function useAudioDevices(kind: DeviceKind): AudioDevice[] {
-  const [devices, setDevices] = useState<AudioDevice[]>([]);
+// null until the first list has been read.
+export function useAudioDevices(kind: DeviceKind): AudioDevice[] | null {
+  const [devices, setDevices] = useState<AudioDevice[] | null>(null);
 
   useEffect(() => {
     const noun = kind === 'audioinput' ? 'Microphone' : 'Speaker';

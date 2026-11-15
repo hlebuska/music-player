@@ -10,4 +10,6 @@ export default defineConfig({
     // "@/components/ui/button" → src/components/ui/button (also set in tsconfig.json)
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
   },
+  // Pre-bundling breaks onnxruntime-web's loading of its .wasm files
+  optimizeDeps: { exclude: ['onnxruntime-web'] },
 });

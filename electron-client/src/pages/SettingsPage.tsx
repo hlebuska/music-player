@@ -1,15 +1,6 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { ArrowLeft, Mic, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -17,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   type DeviceKind,
   getSavedDevice,
@@ -34,8 +26,8 @@ export function SettingsPage({ onBack }: Props) {
   const micStatus = useMicStatus();
 
   return (
-    <main className="flex h-screen flex-col gap-4 overflow-y-auto p-4">
-      <header className="flex items-center gap-2">
+    <main className="flex h-screen flex-col overflow-y-auto">
+      <header className="flex items-center gap-2 border-b px-6 py-4">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -48,10 +40,16 @@ export function SettingsPage({ onBack }: Props) {
         <h1 className="text-lg font-medium">Settings</h1>
       </header>
 
-      <MicrophoneCard {...micStatus} />
-      {/* Remount when the permission changes: device names only appear once
-          the mic is allowed, so the list has to be read again */}
-      <SpeakerCard key={micStatus.status} />
+      <div className="flex flex-col divide-y px-6 py-4">
+        <MicrophoneSection {...micStatus} />
+        {/* Remount when the permission changes: device names only appear once
+            the mic is allowed, so the list has to be read again. Wait for
+            the first status so it doesn't load twice and flash */}
+        <SpeakerSection
+          key={micStatus.status}
+          loading={micStatus.status === null}
+        />
+      </div>
     </main>
   );
 }
@@ -90,59 +88,81 @@ function useMicStatus() {
   return { status, requesting, request };
 }
 
-type MicrophoneCardProps = ReturnType<typeof useMicStatus>;
+type SectionProps = {
+  title: string;
+  description: string;
+  aside?: ReactNode;
+  children: ReactNode;
+};
 
-function MicrophoneCard({ status, requesting, request }: MicrophoneCardProps) {
-  const blocked = status === 'denied' || status === 'restricted';
-
+function SettingsSection({ title, description, aside, children }: SectionProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Microphone</CardTitle>
-        <CardDescription>Needed to hear your voice commands.</CardDescription>
-        <CardAction className="text-sm text-muted-foreground">
-          {status ? STATUS_TEXT[status] : 'Checking…'}
-        </CardAction>
-      </CardHeader>
-
-      {status === 'granted' ? (
-        <CardContent>
-          <DeviceSelect kind="audioinput" label="Microphone" />
-        </CardContent>
-      ) : (
-        <CardFooter>
-          {blocked ? (
-            // After a "no", the OS won't ask again; only System Settings can change it
-            <Button
-              variant="outline"
-              onClick={() => window.mic.openSystemSettings()}
-            >
-              <Settings />
-              Open System Settings
-            </Button>
-          ) : (
-            <Button onClick={request} disabled={status === null || requesting}>
-              <Mic />
-              Allow microphone
-            </Button>
-          )}
-        </CardFooter>
-      )}
-    </Card>
+    <section className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm font-medium">{title}</h2>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        {aside && <div className="text-sm text-muted-foreground">{aside}</div>}
+      </div>
+      {children}
+    </section>
   );
 }
 
-function SpeakerCard() {
+type MicrophoneSectionProps = ReturnType<typeof useMicStatus>;
+
+function MicrophoneSection({
+  status,
+  requesting,
+  request,
+}: MicrophoneSectionProps) {
+  const blocked = status === 'denied' || status === 'restricted';
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Speaker</CardTitle>
-        <CardDescription>Where the music plays.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SettingsSection
+      title="Microphone"
+      description="Needed to hear your voice commands."
+      aside={status ? STATUS_TEXT[status] : 'Checking…'}
+    >
+      {status === null ? (
+        // Still asking the main process; don't flash the "Allow" button
+        <SelectSkeleton />
+      ) : status === 'granted' ? (
+        <DeviceSelect kind="audioinput" label="Microphone" />
+      ) : blocked ? (
+        // After a "no", the OS won't ask again; only System Settings can change it
+        <Button
+          variant="outline"
+          className="self-start"
+          onClick={() => window.mic.openSystemSettings()}
+        >
+          <Settings />
+          Open System Settings
+        </Button>
+      ) : (
+        <Button
+          className="self-start"
+          onClick={request}
+          disabled={requesting}
+        >
+          <Mic />
+          Allow microphone
+        </Button>
+      )}
+    </SettingsSection>
+  );
+}
+
+function SpeakerSection({ loading }: { loading: boolean }) {
+  return (
+    <SettingsSection title="Speaker" description="Where the music plays.">
+      {loading ? (
+        <SelectSkeleton />
+      ) : (
         <DeviceSelect kind="audiooutput" label="Speaker" />
-      </CardContent>
-    </Card>
+      )}
+    </SettingsSection>
   );
 }
 
@@ -150,16 +170,20 @@ function DeviceSelect({ kind, label }: { kind: DeviceKind; label: string }) {
   const devices = useAudioDevices(kind);
   const [selected, setSelected] = useState(() => getSavedDevice(kind));
 
+  function choose(deviceId: string) {
+    setSelected(deviceId);
+    saveDevice(kind, deviceId);
+  }
+
+  // Until the list is read we can't tell whether the saved device is plugged
+  // in, so show a placeholder instead of briefly showing "Unplugged device"
+  if (!devices) return <SelectSkeleton />;
+
   // A saved device that is unplugged right now still shows as the choice, so
   // it comes back by itself when plugged in again; meanwhile the system
   // default is used
   const missing =
     selected !== SYSTEM_DEFAULT && !devices.some((d) => d.id === selected);
-
-  function choose(deviceId: string) {
-    setSelected(deviceId);
-    saveDevice(kind, deviceId);
-  }
 
   return (
     <Select value={selected} onValueChange={choose}>
@@ -181,4 +205,9 @@ function DeviceSelect({ kind, label }: { kind: DeviceKind; label: string }) {
       </SelectContent>
     </Select>
   );
+}
+
+// Same size as the select trigger, so nothing jumps when it loads
+function SelectSkeleton() {
+  return <Skeleton className="h-8 w-full rounded-lg" />;
 }
