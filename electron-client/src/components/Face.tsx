@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export type FaceState = 'idle' | 'alert';
 
 type Gaze = { x: number; y: number }; // px the eyes are shifted from centre
+export type Point = { x: number; y: number }; // viewport px
 
 const CENTER: Gaze = { x: 0, y: 0 };
 const ALERT_GAZE: Gaze = { x: 0, y: -5 };
@@ -11,26 +12,34 @@ const GLANCE_X = 6;
 const SWEEP_CHANCE = 0.3; // a glance sometimes carries on to the other side
 const FIDGET_X = 2.5;
 const FIDGET_Y = 1;
+const LOOK_DISTANCE = 8;
 const BLINK_MS = 110;
 const DOUBLE_BLINK_CHANCE = 0.2;
 
 type Props = {
   state: FaceState;
+  lookAt?: Point | null; // overrides the state's own eye movement
   className?: string;
 };
 
-export function Face({ state, className }: Props) {
+export function Face({ state, lookAt, className }: Props) {
+  const ref = useRef<HTMLDivElement>(null);
   // Offset from where the current state centres the eyes
   const [gaze, setGaze] = useState(CENTER);
   const [blinking, setBlinking] = useState(false);
 
   useEffect(() => {
-    const stop = state === 'alert' ? fidget(setGaze) : wander(setGaze);
+    let stop = () => {};
+    if (lookAt && ref.current) {
+      setGaze(towards(ref.current.getBoundingClientRect(), lookAt));
+    } else {
+      stop = state === 'alert' ? fidget(setGaze) : wander(setGaze);
+    }
     return () => {
       stop();
       setGaze(CENTER);
     };
-  }, [state]);
+  }, [state, lookAt]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -54,13 +63,14 @@ export function Face({ state, className }: Props) {
     return () => clearTimeout(timer);
   }, []);
 
-  const alert = state === 'alert';
+  const alert = state === 'alert' && !lookAt;
   const base = alert ? ALERT_GAZE : CENTER;
   const x = base.x + gaze.x;
   const y = base.y + gaze.y;
 
   return (
     <div
+      ref={ref}
       data-state={state}
       className={cn(
         'flex size-16 items-center justify-center rounded-full bg-primary',
@@ -91,6 +101,13 @@ function Eye({ blinking }: { blinking: boolean }) {
       style={{ transform: `scaleY(${blinking ? 0.1 : 1})` }}
     />
   );
+}
+
+function towards(from: DOMRect, to: Point): Gaze {
+  const dx = to.x - (from.left + from.width / 2);
+  const dy = to.y - (from.top + from.height / 2);
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: (dx / length) * LOOK_DISTANCE, y: (dy / length) * LOOK_DISTANCE };
 }
 
 // Idle: mostly looks ahead, now and then glances to one side

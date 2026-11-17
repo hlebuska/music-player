@@ -1,6 +1,7 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Face } from '@/components/Face';
+import { Face, type Point } from '@/components/Face';
 import { Spectrum } from '@/components/Spectrum';
 import { VolumeKnob } from '@/components/VolumeKnob';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,8 @@ type Props = {
   serverStatus: ServerStatus;
   onOpenSettings: () => void;
 };
+
+const LOOK_AT_KNOB_MS = 1200; // after the last turn
 
 const STATUS_TEXT: Partial<Record<WakeWordStatus, string>> = {
   'no-mic': 'No microphone access. Check Settings.',
@@ -33,10 +36,14 @@ export function PlayerPage({
       ? "Can't reach the voice server."
       : undefined);
 
+  const knob = useLookOnTurn();
+
   return (
     <main className="relative flex h-screen items-center justify-center">
       <div className="absolute top-3 right-3 flex items-center gap-2">
-        <VolumeKnob />
+        <div ref={knob.ref}>
+          <VolumeKnob onChange={knob.onChange} />
+        </div>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -52,6 +59,7 @@ export function PlayerPage({
       <div className="relative">
         <Face
           state={recording ? 'alert' : 'idle'}
+          lookAt={knob.point}
           className={cn(
             'outline-3 outline-offset-4 outline-transparent transition-[outline-color] duration-300',
             recording && 'outline-blue-500',
@@ -68,4 +76,32 @@ export function PlayerPage({
       </div>
     </main>
   );
+}
+
+// Gives the point to look at for a while after the watched control changes
+function useLookOnTurn() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [point, setPoint] = useState<Point | null>(null);
+  const last = useRef<number>(undefined);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // The knob also reports its saved value on mount; only a real turn counts
+  const onChange = useCallback((value: number) => {
+    const turned = last.current !== undefined && value !== last.current;
+    last.current = value;
+    if (!turned || !ref.current) return;
+
+    const rect = ref.current.getBoundingClientRect();
+    const center = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+    setPoint((current) => current ?? center);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setPoint(null), LOOK_AT_KNOB_MS);
+  }, []);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return { ref, point, onChange };
 }
