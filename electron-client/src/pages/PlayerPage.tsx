@@ -1,5 +1,6 @@
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Face } from '@/components/Face';
 import { Spectrum } from '@/components/Spectrum';
 import { VolumeKnob } from '@/components/VolumeKnob';
 import { cn } from '@/lib/utils';
@@ -28,7 +29,9 @@ export function PlayerPage({
 }: Props) {
   const message =
     STATUS_TEXT[status] ??
-    (serverStatus === 'disconnected' ? "Can't reach the voice server." : undefined);
+    (serverStatus === 'disconnected'
+      ? "Can't reach the voice server."
+      : undefined);
 
   return (
     <main className="relative flex h-screen items-center justify-center">
@@ -47,10 +50,10 @@ export function PlayerPage({
 
       {/* The circle stays centred; the spectrum and messages hang below it */}
       <div className="relative">
-        <div
-          data-recording={recording}
+        <Face
+          state={recording ? 'alert' : 'idle'}
           className={cn(
-            'size-16 rounded-full bg-primary outline-3 outline-offset-4 outline-transparent transition-[outline-color] duration-300',
+            'outline-3 outline-offset-4 outline-transparent transition-[outline-color] duration-300',
             recording && 'outline-blue-500',
           )}
         />
