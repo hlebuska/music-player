@@ -2,7 +2,7 @@
 // over IPC; play navigates here, the rest go to playerPreload.ts.
 import { BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
-import { PLAYE  R_CHANNEL, type PlayerCommand } from './shared/player';
+import { PLAYER_CHANNEL, type PlayerCommand } from './shared/player';
 
 const MUSIC_URL = 'https://music.youtube.com';
 const VIDEO_ID = /^[\w-]{11}$/;

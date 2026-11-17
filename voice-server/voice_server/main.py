@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from voice_server.auth import authenticated_hello
 from voice_server.config import DEBUG, TOKEN, WHISPER_LANGUAGE, WHISPER_MODEL
 from voice_server.controller import Controller
-from voice_server.intent import parse
+from voice_server.intent import COMMAND_HOTWORDS, parse
 from voice_server.search import MusicSearch
 from voice_server.stt import WhisperSTT
 
@@ -19,7 +19,7 @@ TEST_PAGE = Path(__file__).parent / "test_page.html"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Runs once at startup: load the Whisper model, so no utterance pays for it
-    app.state.stt = WhisperSTT(WHISPER_MODEL, WHISPER_LANGUAGE)
+    app.state.stt = WhisperSTT(WHISPER_MODEL, WHISPER_LANGUAGE, COMMAND_HOTWORDS)
     app.state.controller = Controller(MusicSearch())
     yield                    # server runs here
 

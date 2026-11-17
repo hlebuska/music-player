@@ -65,9 +65,10 @@ The client is a mic and a speaker: it decides when you're talking, ships the phr
 Player notes:
 
 - Start a track by navigating the hidden window to `music.youtube.com/watch?v=<id>`.
-- Prefer keyboard shortcuts and URL navigation over clicking page elements, which break when YouTube changes its page.
-- Google may block sign-in inside Electron. Fixes: a standard Chrome user-agent on that window, or sign in once in a normal browser and import the cookies.
-- Check early that Chromium's echo cancellation actually removes the music the hidden window plays. If it does, the wake word works over loud music.
+- Control playback through the page's `<video>` element (pause, play, currentTime) and URL navigation, never by clicking page elements, which break when YouTube changes its page.
+- Google blocks sign-in inside Electron, even with a Chrome user agent. Posing as Firefox works: Firefox's user agent, and no `Sec-CH-UA` headers.
+- Chromium's echo cancellation removes the music our own player window plays, but not audio from other apps: only Chromium's own output is its reference.
+- Volume (later): leave YouTube Music's own volume at max and set loudness with a Web Audio gain node in the player page (`<video>` → gain → speakers). YouTube resets the `<video>` volume on every track but never touches the gain, and the knob, voice volume and ducking can all set the same gain, with smooth fades.
 
 ## Server
 

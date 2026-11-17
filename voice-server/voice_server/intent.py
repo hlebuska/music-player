@@ -52,6 +52,12 @@ RULES = [
     (r"(i )?like (this|this song|it)", "like", {}),
 ]
 
+COMMAND_HOTWORDS = (
+    "Play. Pause. Resume. Continue. Stop. Next. Skip. Previous. Go back. "
+    "Volume up. Volume down. Louder. Quieter. Set volume to 50. "
+    "What's playing? Like this song."
+)
+
 # fullmatch: the pattern must cover the whole phrase, so "play" inside "display" never counts
 COMPILED = [(re.compile(pattern), name, fixed) for pattern, name, fixed in RULES]
 
