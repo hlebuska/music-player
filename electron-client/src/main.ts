@@ -11,8 +11,8 @@ if (started) {
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
-    width: 600,
-    height: 600,
+    width: 500,
+    height: 500,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
     },
