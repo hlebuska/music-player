@@ -4,6 +4,7 @@ declare module '*.css';
 // Added to the page by preload.ts
 interface Window {
   mic: import('./shared/mic').MicApi;
+  player: import('./shared/player').PlayerApi;
 }
 
 interface ImportMetaEnv {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRecorder } from '@/hooks/useRecorder';
 import { useVoiceServer } from '@/hooks/useVoiceServer';
+import { isPlayerCommand } from '@/shared/player';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { PlayerPage } from '@/pages/PlayerPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -14,6 +15,7 @@ export function App() {
 
   const server = useVoiceServer((message) => {
     console.log('server:', message);
+    if (isPlayerCommand(message)) window.player.send(message);
   });
 
   const recorder = useRecorder((clip) => {

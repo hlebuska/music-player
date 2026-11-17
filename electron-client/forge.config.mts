@@ -34,6 +34,11 @@ const config: ForgeConfig = {
           config: 'vite.preload.config.mts',
           target: 'preload',
         },
+        {
+          entry: 'src/playerPreload.ts',
+          config: 'vite.preload.config.mts',
+          target: 'preload',
+        },
       ],
       renderer: [
         {

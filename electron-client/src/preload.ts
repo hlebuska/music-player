@@ -4,6 +4,7 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { contextBridge, ipcRenderer } from 'electron';
 import { MIC_CHANNELS, type MicApi } from './shared/mic';
+import { PLAYER_CHANNEL, type PlayerApi } from './shared/player';
 
 const mic: MicApi = {
   getStatus: () => ipcRenderer.invoke(MIC_CHANNELS.getStatus),
@@ -12,3 +13,9 @@ const mic: MicApi = {
 };
 
 contextBridge.exposeInMainWorld('mic', mic);
+
+const player: PlayerApi = {
+  send: (command) => ipcRenderer.send(PLAYER_CHANNEL, command),
+};
+
+contextBridge.exposeInMainWorld('player', player);
