@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
@@ -8,7 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from voice_server.auth import authenticated_hello
 from voice_server.config import DEBUG, TOKEN, WHISPER_LANGUAGE, WHISPER_MODEL
-from voice_server.controller import Controller
+from voice_server.controller import Controller, error
 from voice_server.intent import COMMAND_HOTWORDS, parse
 from voice_server.search import MusicSearch
 from voice_server.stt import WhisperSTT
@@ -46,24 +47,38 @@ async def ws(websocket: WebSocket, hello: dict = Depends(authenticated_hello)):
     try:
         while True:                           # one iteration per incoming message
             audio = await websocket.receive_bytes()
-            print(f"got utterance: {len(audio)} bytes")
-
-            text = await asyncio.to_thread(websocket.app.state.stt.transcribe, audio)
-            print(f"heard: {text!r}")
-
-            intent = parse(text)
-            print(f"intent: {intent}")
-            if intent is None:
-                await websocket.send_json(
-                    {"type": "error", "code": "not_understood", "message": f"didn't understand intent: {text!r}"}
-                )
-                continue
-
-            # Tell the client what we understood, then what to do about it
-            await websocket.send_json({"type": "heard", "transcript": text, "intent": asdict(intent)})
-
-            command = await websocket.app.state.controller.handle(intent)
-            print(f"command: {command}")
-            await websocket.send_json(command)
+            try:
+                await handle_utterance(websocket, audio)
+            except WebSocketDisconnect:
+                raise
+            except Exception:
+                # A bug in one utterance must not drop the connection
+                traceback.print_exc()
+                await websocket.send_json(error("internal", "something went wrong"))
     except WebSocketDisconnect:
         print(f"client left: {hello.get('client_id')}")
+
+
+async def handle_utterance(websocket: WebSocket, audio: bytes):
+    print(f"got utterance: {len(audio)} bytes")
+
+    try:
+        text = await asyncio.to_thread(websocket.app.state.stt.transcribe, audio)
+    except Exception as e:
+        print(f"transcription failed: {e!r}")
+        await websocket.send_json(error("bad_audio", "couldn't decode the audio clip"))
+        return
+    print(f"heard: {text!r}")
+
+    intent = parse(text)
+    print(f"intent: {intent}")
+    if intent is None:
+        await websocket.send_json(error("not_understood", f"didn't understand intent: {text!r}"))
+        return
+
+    # Tell the client what we understood, then what to do about it
+    await websocket.send_json({"type": "heard", "transcript": text, "intent": asdict(intent)})
+
+    command = await websocket.app.state.controller.handle(intent)
+    print(f"command: {command}")
+    await websocket.send_json(command)
