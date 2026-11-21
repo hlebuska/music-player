@@ -1,4 +1,5 @@
 import asyncio
+import time
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -69,8 +70,15 @@ async def ws(websocket: WebSocket, hello: dict = Depends(authenticated_hello)):
 
 
 async def handle_utterance(websocket: WebSocket, audio: bytes):
+    start = time.perf_counter()
     print(f"got utterance: {len(audio)} bytes")
+    try:
+        await respond(websocket, audio)
+    finally:
+        print(f"utterance took {time.perf_counter() - start:.2f}s")
 
+
+async def respond(websocket: WebSocket, audio: bytes):
     try:
         text = await asyncio.to_thread(websocket.app.state.stt.transcribe, audio)
     except Exception as e:
