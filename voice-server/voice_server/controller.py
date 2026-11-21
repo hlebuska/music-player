@@ -46,7 +46,11 @@ class Controller:
         if not query:
             return error("not_understood", "what should I play?")
         # Blocking network call: run it in a thread so other sockets keep working
-        track = await asyncio.to_thread(self.search.find_song, query)
+        try:
+            track = await asyncio.to_thread(self.search.find_song, query)
+        except Exception as e:
+            print(f"search failed: {e!r}")
+            return error("search_failed", f"couldn't search for {query!r}, try again")
         if track is None:
             return error("not_found", f"nothing found for {query!r}")
         self.current = track
