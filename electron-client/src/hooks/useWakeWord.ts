@@ -7,11 +7,17 @@ const COOLDOWN_MS = 2000; // one phrase keeps scoring high for a few chunks
 
 export type WakeWordStatus = 'starting' | 'listening' | 'no-mic' | 'failed';
 
-export function useWakeWord(onDetected: () => void) {
+// onChunk gets every 80 ms of 16 kHz mic audio, for other listeners on the same mic
+export function useWakeWord(
+  onDetected: () => void,
+  onChunk?: (chunk: Float32Array) => void,
+) {
   const [status, setStatus] = useState<WakeWordStatus>('starting');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
+  const onChunkRef = useRef(onChunk);
+  onChunkRef.current = onChunk;
 
   useEffect(() => {
     let stopped = false;
@@ -51,6 +57,7 @@ export function useWakeWord(onDetected: () => void) {
         let queue = Promise.resolve();
         let lastDetection = 0;
         chunker.port.onmessage = (event: MessageEvent<Float32Array>) => {
+          onChunkRef.current?.(event.data);
           queue = queue.then(async () => {
             const score = await detector.process(event.data);
             const now = performance.now();

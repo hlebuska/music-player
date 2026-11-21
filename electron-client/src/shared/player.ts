@@ -5,7 +5,8 @@ export type PlayerCommand =
   | { type: 'play'; videoId: string }
   | { type: 'pause' }
   | { type: 'resume' }
-  | { type: 'volume'; level: number }; // 0–100
+  | { type: 'volume'; level: number } // 0–100
+  | { type: 'duck'; on: boolean }; // from the page while it records, never the server
 
 export type PlayerApi = {
   send: (command: PlayerCommand) => void;

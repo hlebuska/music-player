@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRecorder } from '@/hooks/useRecorder';
 import { useVoiceServer } from '@/hooks/useVoiceServer';
 import { isPlayerCommand } from '@/shared/player';
@@ -7,8 +7,6 @@ import { PlayerPage } from '@/pages/PlayerPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 
 type Page = 'player' | 'settings';
-
-const RECORD_MS = 6000;
 
 export function App() {
   const [page, setPage] = useState<Page>('player');
@@ -28,8 +26,13 @@ export function App() {
   // Lives here, not in PlayerPage, so it keeps listening while settings is open
   const { status, stream } = useWakeWord(() => {
     console.log('wake word heard');
-    if (stream) recorder.start(stream, RECORD_MS);
-  });
+    if (stream) recorder.start(stream);
+  }, recorder.feed);
+
+  // Quieter music while recording, for both the end-of-speech detection and the STT
+  useEffect(() => {
+    window.player.send({ type: 'duck', on: recorder.recording });
+  }, [recorder.recording]);
 
   if (page === 'settings') {
     return <SettingsPage onBack={() => setPage('player')} />;

@@ -18,7 +18,7 @@ const FEATURE_WINDOW = 16; // embeddings per wake word score
 
 const MODELS = 'models/'; // in public/, relative to index.html
 
-async function load(file: string) {
+export async function loadModel(file: string) {
   return ort.InferenceSession.create(MODELS + file, {
     executionProviders: ['wasm'],
   });
@@ -45,9 +45,9 @@ export class WakeWordDetector {
 
   static async create(wakeWordModel: string) {
     const [melspec, embedding, wakeWord] = await Promise.all([
-      load('melspectrogram.onnx'),
-      load('embedding_model.onnx'),
-      load(wakeWordModel),
+      loadModel('melspectrogram.onnx'),
+      loadModel('embedding_model.onnx'),
+      loadModel(wakeWordModel),
     ]);
     return new WakeWordDetector(melspec, embedding, wakeWord);
   }

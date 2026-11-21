@@ -14,6 +14,7 @@ const FIREFOX_USER_AGENT =
 
 let playerWindow: BrowserWindow | null = null;
 let volume: number | null = null;
+let ducked = false;
 
 // Visible for testing; will be hidden later
 export function createPlayerWindow() {
@@ -47,6 +48,12 @@ export function createPlayerWindow() {
         level: volume,
       });
     }
+    if (ducked) {
+      playerWindow?.webContents.send(PLAYER_CHANNEL, {
+        type: 'duck',
+        on: true,
+      });
+    }
   });
   playerWindow.on('closed', () => {
     playerWindow = null;
@@ -70,6 +77,13 @@ export function registerPlayerHandlers() {
         playerWindow.webContents.send(PLAYER_CHANNEL, {
           type: 'volume',
           level: volume,
+        });
+        break;
+      case 'duck':
+        ducked = command.on === true;
+        playerWindow.webContents.send(PLAYER_CHANNEL, {
+          type: 'duck',
+          on: ducked,
         });
         break;
       case 'pause':
