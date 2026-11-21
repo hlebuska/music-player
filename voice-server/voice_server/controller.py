@@ -28,7 +28,7 @@ class Controller:
     async def handle(self, intent: Intent) -> dict:
         match intent.name:
             case "play" | "play_radio":
-                return await self.play(intent.slots.get("query") or intent.slots.get("seed"))
+                return await self.play(intent.slots.get("query") or intent.slots.get("radio_seed"))
             case "pause":
                 return self.pause()
             case "resume":

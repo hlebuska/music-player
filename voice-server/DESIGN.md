@@ -109,7 +109,7 @@ The server turns a phrase into a command in four stages, each behind its own int
 |---|---|---|---|
 | STT | audio → transcript | faster-whisper `small.en` on CPU, prompt seeded with artist names from the library | Our fine-tuned Whisper; Moonshine for the Pi |
 | Intent parser | transcript → {intent, slots} | Rules for fixed commands (pause, next, volume…); an OpenAI model for play requests and anything the rules miss, falling back to the rules if it fails | Fine-tuned DistilBERT or small local LLM |
-| Resolver | {query} → videoId; {seed} → videoId + radio playlistId | ytmusicapi search with the whole phrase ("numb linkin park"); for a radio, the top song's watch playlist (`get_watch_playlist(videoId, radio=True)`) | Seed kinds from the LLM: genre playlists, artist radio; prefer the user's library and liked songs |
+| Resolver | {query} → videoId; {radio_seed} → videoId + radio playlistId | ytmusicapi search with the whole phrase ("numb linkin park"); for a radio, the top song's watch playlist (`get_watch_playlist(videoId, radio=True)`) | Seed kinds from the LLM: genre playlists, artist radio; prefer the user's library and liked songs |
 | Player service | intent → commands to the client | Mirror of the client's playback, history, current radio seed; in memory | Several players |
 
 Intents for v1:

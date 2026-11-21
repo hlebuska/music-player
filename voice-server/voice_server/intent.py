@@ -37,8 +37,8 @@ PLAY = r"(play|put on|turn on|start playing|listen to|i want to hear|let me hear
 # Each rule: (pattern, intent name, fixed slots). Named groups (?P<name>...) become slots.
 RULES = [
     # Radio before plain "play", or "play something like x" would search for that phrase
-    (rf"{PLAY} (something|music|songs?) like (?P<seed>.+)", "play_radio", {}),
-    (rf"{PLAY} some (?P<seed>.+)", "play_radio", {}),
+    (rf"{PLAY} (something|music|songs?) like (?P<radio_seed>.+)", "play_radio", {}),
+    (rf"{PLAY} some (?P<radio_seed>.+)", "play_radio", {}),
     # Bare "play" means resume, so it goes before "play {query}"
     (r"(resume|continue|unpause|play)( the music| it)?", "resume", {}),
     (rf"{PLAY} (?P<query>.+)", "play", {}),
@@ -66,7 +66,7 @@ COMPILED = [(re.compile(pattern), name, fixed) for pattern, name, fixed in RULES
 NEGATION = {"don't", "dont", "do", "not", "no", "never"}
 
 
-def parse(text: str) -> Intent | None:
+def parse_reg(text: str) -> Intent | None:
     # The command may not be at the start: "hey bruh hey bruh play play weekend".
     # Try the whole phrase first, then drop leading words one at a time until a rule matches.
     # Numbers as digits, so rules only need \d+: "volume to five" -> "volume to 5"

@@ -8,9 +8,17 @@ from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
 from voice_server.auth import authenticated_hello
-from voice_server.config import DEBUG, TOKEN, WHISPER_LANGUAGE, WHISPER_MODEL
+from voice_server.config import (
+    DEBUG,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+    TOKEN,
+    WHISPER_LANGUAGE,
+    WHISPER_MODEL,
+)
 from voice_server.controller import Controller, error
-from voice_server.intent import COMMAND_HOTWORDS, parse
+from voice_server.intent import COMMAND_HOTWORDS
+from voice_server.llm_intent import LLMIntentParser, understand
 from voice_server.search import MusicSearch
 from voice_server.stt import WhisperSTT
 
@@ -22,6 +30,7 @@ async def lifespan(app: FastAPI):
     # Runs once at startup: load the Whisper model, so no utterance pays for it
     app.state.stt = WhisperSTT(WHISPER_MODEL, WHISPER_LANGUAGE, COMMAND_HOTWORDS)
     app.state.controller = Controller(MusicSearch())
+    app.state.llm = LLMIntentParser(OPENAI_MODEL, OPENAI_API_KEY) if OPENAI_API_KEY else None
     yield                    # server runs here
 
 
@@ -70,7 +79,7 @@ async def handle_utterance(websocket: WebSocket, audio: bytes):
         return
     print(f"heard: {text!r}")
 
-    intent = parse(text)
+    intent = await understand(text, websocket.app.state.llm)
     print(f"intent: {intent}")
     if intent is None:
         await websocket.send_json(error("not_understood", f"didn't understand intent: {text!r}"))

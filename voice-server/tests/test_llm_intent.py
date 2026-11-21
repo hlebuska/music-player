@@ -4,8 +4,8 @@ from voice_server.intent import Intent
 from voice_server.llm_intent import LLMIntent, to_intent, understand
 
 
-def llm(name, query=None, seed=None, direction=None, level=None):
-    return LLMIntent(name=name, query=query, seed=seed, direction=direction, level=level)
+def llm(name, query=None, radio_seed=None, direction=None, level=None):
+    return LLMIntent(name=name, query=query, radio_seed=radio_seed, direction=direction, level=level)
 
 
 class FakeLLM:
@@ -32,7 +32,7 @@ def test_play_splits_track_and_artist_like_the_rules():
 
 
 def test_radio_keeps_seed():
-    assert to_intent(llm("play_radio", seed="jazz")) == Intent("play_radio", {"seed": "jazz"})
+    assert to_intent(llm("play_radio", radio_seed="jazz")) == Intent("play_radio", {"radio_seed": "jazz"})
 
 
 def test_volume_prefers_level_and_clamps():
@@ -53,14 +53,14 @@ def test_fixed_commands_skip_the_llm():
 
 
 def test_play_goes_to_the_llm():
-    fake = FakeLLM(Intent("play_radio", {"seed": "jazz"}))
-    assert run("play jazz", fake) == Intent("play_radio", {"seed": "jazz"})
+    fake = FakeLLM(Intent("play_radio", {"radio_seed": "jazz"}))
+    assert run("play jazz", fake) == Intent("play_radio", {"radio_seed": "jazz"})
     assert fake.calls == ["play jazz"]
 
 
 def test_unmatched_phrase_goes_to_the_llm():
-    fake = FakeLLM(Intent("play_radio", {"seed": "jazz"}))
-    assert run("i'm in the mood for jazz", fake) == Intent("play_radio", {"seed": "jazz"})
+    fake = FakeLLM(Intent("play_radio", {"radio_seed": "jazz"}))
+    assert run("i'm in the mood for jazz", fake) == Intent("play_radio", {"radio_seed": "jazz"})
 
 
 def test_llm_failure_falls_back_to_rules():

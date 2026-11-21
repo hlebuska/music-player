@@ -1,6 +1,6 @@
 import pytest
 
-from voice_server.intent import parse
+from voice_server.intent import parse_reg
 from voice_server.numbers import to_digits
 
 
@@ -37,7 +37,7 @@ def test_to_digits(text, expected):
     ],
 )
 def test_volume_words(text, level):
-    intent = parse(text)
+    intent = parse_reg(text)
     assert intent is not None
     assert intent.name == "volume"
     assert intent.slots["level"] == level
